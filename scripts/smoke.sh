@@ -52,15 +52,23 @@ const { chromium } = require('./frontend/node_modules/@playwright/test');
       res.end(data);
     });
   }).listen(4173);
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
-  await page.goto('http://127.0.0.1:4173/audit-in-a-box/', { waitUntil: 'networkidle' });
-  await page.getByText('audit-in-a-box').first().waitFor();
-  await page.getByText('Star on GitHub').waitFor();
-  await page.getByText('PayPal').waitFor();
-  await page.getByText(/^Version 0\.1\.0$/).waitFor();
-  await browser.close();
-  server.close();
+  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+  try {
+    const context = await browser.newContext({ serviceWorkers: 'block' });
+    const page = await context.newPage();
+    await page.goto('http://127.0.0.1:4173/audit-in-a-box/', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1500);
+    const body = await page.locator('body').innerText({ timeout: 10000 });
+    const githubLinks = await page.locator('a[href="https://github.com/baditaflorin/audit-in-a-box"]').count();
+    const paypalLinks = await page.locator('a[href="https://www.paypal.com/paypalme/florinbadita"]').count();
+    const forms = await page.locator('form[aria-label="Run dependency audit"]').count();
+    if (!body.includes('Version 0.1.0') || githubLinks < 1 || paypalLinks < 1 || forms < 1) {
+      throw new Error('Pages smoke assertions failed');
+    }
+  } finally {
+    await browser.close();
+    server.close();
+  }
 })().catch((err) => {
   console.error(err);
   process.exit(1);
