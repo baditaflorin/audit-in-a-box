@@ -1,0 +1,113 @@
+openapi: 3.1.0
+info:
+  title: audit-in-a-box API
+  version: 0.1.0
+servers:
+  - url: http://localhost:25342
+paths:
+  /healthz:
+    get:
+      responses:
+        "200":
+          description: Healthy
+  /readyz:
+    get:
+      responses:
+        "200":
+          description: Ready with tool status
+  /metrics:
+    get:
+      responses:
+        "200":
+          description: Prometheus metrics
+  /api/v1/tools:
+    get:
+      responses:
+        "200":
+          description: Tool availability
+  /api/v1/scrape:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [html]
+              properties:
+                html:
+                  type: string
+      responses:
+        "200":
+          description: Manifest candidates
+  /api/v1/audits:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuditRequest"
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                file_name:
+                  type: string
+                ecosystem:
+                  type: string
+                pasted_html:
+                  type: string
+      responses:
+        "200":
+          description: Audit report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditReport"
+components:
+  schemas:
+    AuditRequest:
+      type: object
+      properties:
+        file_name:
+          type: string
+        content:
+          type: string
+        pasted_html:
+          type: string
+        ecosystem:
+          type: string
+          enum: [npm, go, python, unknown]
+    AuditReport:
+      type: object
+      required: [id, generated_at, dependencies, vulnerabilities, license_risks, maintainer_health, risk, summary]
+      properties:
+        id:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+        summary:
+          type: string
+        risk:
+          type: object
+        dependencies:
+          type: array
+          items:
+            type: object
+        vulnerabilities:
+          type: array
+          items:
+            type: object
+        license_risks:
+          type: array
+          items:
+            type: object
+        maintainer_health:
+          type: array
+          items:
+            type: object
