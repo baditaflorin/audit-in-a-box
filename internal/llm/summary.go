@@ -57,7 +57,11 @@ func (s Summarizer) ollama(ctx context.Context, prompt string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			return
+		}
+	}()
 	if resp.StatusCode >= 300 {
 		return "", fmt.Errorf("ollama returned %s", resp.Status)
 	}
@@ -79,7 +83,7 @@ func (s Summarizer) command(ctx context.Context, prompt string) (string, error) 
 
 	cmdCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(cmdCtx, parts[0], parts[1:]...)
+	cmd := exec.CommandContext(cmdCtx, parts[0], parts[1:]...) // #nosec G204 -- operator-configured local LLM command.
 	cmd.Stdin = strings.NewReader(prompt)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer

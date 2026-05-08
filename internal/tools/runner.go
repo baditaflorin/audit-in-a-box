@@ -24,7 +24,7 @@ func (r Runner) Command(ctx context.Context, name string, args ...string) (strin
 	cmdCtx, cancel := context.WithTimeout(ctx, r.Timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(cmdCtx, name, args...)
+	cmd := exec.CommandContext(cmdCtx, name, args...) // #nosec G204 -- scanner command names are selected by backend code.
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout

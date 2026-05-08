@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-go mod tidy
+CGO_ENABLED=0 go mod tidy
 npm --prefix frontend install

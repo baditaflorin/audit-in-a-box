@@ -2,8 +2,8 @@
 set -euo pipefail
 
 make fmt
-go vet $(go list ./... | grep -v '/frontend/node_modules/')
-golangci-lint run $(go list ./... | grep -v '/frontend/node_modules/')
+CGO_ENABLED=0 go vet $(CGO_ENABLED=0 go list ./... | grep -v '/frontend/node_modules/')
+golangci-lint run --allow-parallel-runners ./cmd/... ./internal/... ./pkg/...
 npm --prefix frontend run lint
 npm --prefix frontend run format:check
 npm --prefix frontend run build

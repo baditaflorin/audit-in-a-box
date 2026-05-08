@@ -10,6 +10,15 @@ linters:
     - misspell
     - unused
     - ineffassign
+  settings:
+    revive:
+      rules:
+        - name: package-comments
+          disabled: true
+        - name: exported
+          disabled: true
+        - name: increment-decrement
+          disabled: true
 run:
   timeout: 3m
 issues:

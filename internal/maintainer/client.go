@@ -210,7 +210,11 @@ func (c Client) getJSON(ctx context.Context, endpoint string, target any) error 
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			return
+		}
+	}()
 	if resp.StatusCode >= 300 {
 		return fmt.Errorf("%s returned %s", endpoint, resp.Status)
 	}

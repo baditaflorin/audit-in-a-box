@@ -6,7 +6,7 @@ cd "$ROOT"
 
 make build
 
-go run ./cmd/server >/tmp/audit-in-a-box-server.log 2>&1 &
+SERVER_ADDR=:18080 CGO_ENABLED=0 ./bin/audit-server >/tmp/audit-in-a-box-server.log 2>&1 &
 SERVER_PID=$!
 cleanup() {
   kill "$SERVER_PID" >/dev/null 2>&1 || true
@@ -14,14 +14,16 @@ cleanup() {
 trap cleanup EXIT
 
 for _ in {1..30}; do
-  if curl -fsS http://localhost:8080/healthz >/dev/null; then
+  if curl -fsS http://localhost:18080/healthz >/dev/null 2>&1; then
+    READY=1
     break
   fi
   sleep 1
 done
+test "${READY:-0}" = "1"
 
-curl -fsS http://localhost:8080/readyz >/dev/null
-curl -fsS http://localhost:8080/metrics >/dev/null
+curl -fsS http://localhost:18080/readyz >/dev/null
+curl -fsS http://localhost:18080/metrics >/dev/null
 
 node <<'NODE'
 const { chromium } = require('./frontend/node_modules/@playwright/test');
@@ -31,6 +33,13 @@ const { chromium } = require('./frontend/node_modules/@playwright/test');
     const path = require('path');
     const pathname = req.url === '/' ? '/index.html' : req.url.replace('/audit-in-a-box', '');
     const file = path.join(process.cwd(), 'docs', pathname);
+    const contentType = file.endsWith('.js')
+      ? 'application/javascript'
+      : file.endsWith('.css')
+        ? 'text/css'
+        : file.endsWith('.webmanifest')
+          ? 'application/manifest+json'
+          : 'text/html';
     fs.readFile(file, (err, data) => {
       if (err) {
         fs.readFile(path.join(process.cwd(), 'docs', 'index.html'), (fallbackErr, fallback) => {
@@ -39,7 +48,7 @@ const { chromium } = require('./frontend/node_modules/@playwright/test');
         });
         return;
       }
-      res.writeHead(200);
+      res.writeHead(200, {'content-type': contentType});
       res.end(data);
     });
   }).listen(4173);
@@ -49,7 +58,7 @@ const { chromium } = require('./frontend/node_modules/@playwright/test');
   await page.getByText('audit-in-a-box').first().waitFor();
   await page.getByText('Star on GitHub').waitFor();
   await page.getByText('PayPal').waitFor();
-  await page.getByText('Version').waitFor();
+  await page.getByText(/^Version 0\.1\.0$/).waitFor();
   await browser.close();
   server.close();
 })().catch((err) => {

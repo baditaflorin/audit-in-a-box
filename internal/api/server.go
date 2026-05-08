@@ -138,7 +138,11 @@ func (s Server) decodeAudit(r *http.Request) (models.AuditRequest, error) {
 		request.PastedHTML = r.FormValue("pasted_html")
 		file, header, err := r.FormFile("file")
 		if err == nil {
-			defer file.Close()
+			defer func() {
+				if closeErr := file.Close(); closeErr != nil {
+					slog.Debug("close_upload_file", "error", closeErr)
+				}
+			}()
 			data, readErr := io.ReadAll(io.LimitReader(file, s.Config.MaxUploadBytes+1))
 			if readErr != nil {
 				return models.AuditRequest{}, readErr
@@ -168,6 +172,7 @@ func (s Server) logMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(recorder, r)
 		route := routePattern(r)
 		(&statusRecorder{status: recorder.status, size: recorder.size}).observe(r.Method, route, start)
+		// #nosec G706 -- structured request logs avoid raw manifest bodies and are operationally required.
 		slog.Info("http_request",
 			"method", r.Method,
 			"path", r.URL.Path,
