@@ -51,6 +51,18 @@ export function App() {
     queryKey: ["tools", backendURL],
     queryFn: () => fetchTools(backendURL),
   });
+  const liveCommit = useQuery({
+    queryKey: ["github-main-commit"],
+    queryFn: async () => {
+      const response = await fetch(
+        "https://api.github.com/repos/baditaflorin/audit-in-a-box/commits/main",
+      );
+      if (!response.ok) throw new Error("GitHub commit lookup failed");
+      const payload = (await response.json()) as { sha: string };
+      return payload.sha.slice(0, 12);
+    },
+    staleTime: 60_000,
+  });
 
   const audit = useMutation({
     mutationFn: auditManifest,
@@ -169,7 +181,7 @@ export function App() {
 
             <footer className="flex flex-wrap items-center gap-3 text-xs text-ink/55">
               <span>Version {__APP_VERSION__}</span>
-              <span>Commit {__GIT_COMMIT__}</span>
+              <span>Commit {liveCommit.data ?? __GIT_COMMIT__}</span>
               <span>
                 Repository https://github.com/baditaflorin/audit-in-a-box
               </span>

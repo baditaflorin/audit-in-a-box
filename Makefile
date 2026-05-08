@@ -25,7 +25,7 @@ dev: ## run frontend and backend locally
 build: ## build backend and Pages-ready frontend into docs/
 	$(GO) build -trimpath -ldflags="$(GO_LDFLAGS)" -o bin/audit-server ./cmd/server
 	rm -rf docs/assets
-	VITE_APP_VERSION=$(VERSION) VITE_GIT_COMMIT=$(COMMIT) npm --prefix frontend run build
+	VITE_APP_VERSION=$(VERSION) npm --prefix frontend run build
 	test -s docs/index.html
 
 data: ## Mode C has no static data pipeline
