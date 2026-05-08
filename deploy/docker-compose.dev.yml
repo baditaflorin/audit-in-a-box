@@ -1,0 +1,12 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      SERVER_ADDR: :8080
+      ALLOWED_ORIGINS: http://localhost:5173,http://localhost:4173,https://baditaflorin.github.io
+      WORK_DIR: /tmp/audit-work
+    ports:
+      - "8080:8080"
+    read_only: false

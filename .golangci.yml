@@ -1,0 +1,17 @@
+version: "2"
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - revive
+    - gosec
+    - gocyclo
+    - misspell
+    - unused
+    - ineffassign
+run:
+  timeout: 3m
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

@@ -1,0 +1,28 @@
+{
+  "title": "audit-in-a-box",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "HTTP requests",
+      "targets": [
+        { "expr": "sum(rate(audit_in_a_box_http_requests_total[5m])) by (status)" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Audit duration",
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(audit_in_a_box_audit_duration_seconds_bucket[5m])) by (le))" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Scanner failures",
+      "targets": [
+        { "expr": "sum(audit_in_a_box_scanner_failures_total)" }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "version": 1
+}
