@@ -1,0 +1,11 @@
+{
+  "name": "audit-in-a-box",
+  "short_name": "auditbox",
+  "description": "Static web UI plus local Docker analyzer for OSS dependency risk reports.",
+  "start_url": "/audit-in-a-box/",
+  "scope": "/audit-in-a-box/",
+  "display": "standalone",
+  "theme_color": "#0f675f",
+  "background_color": "#f7f5ee",
+  "icons": []
+}
