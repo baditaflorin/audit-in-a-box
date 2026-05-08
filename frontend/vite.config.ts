@@ -1,4 +1,5 @@
 import react from "@vitejs/plugin-react";
+import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
@@ -8,6 +9,18 @@ const pkg = JSON.parse(
 ) as {
   version: string;
 };
+
+function gitFallbackCommit() {
+  try {
+    return execSync("git rev-parse --short=12 origin/main", {
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .toString()
+      .trim();
+  } catch {
+    return "unknown";
+  }
+}
 
 export default defineConfig({
   base: "/audit-in-a-box/",
@@ -28,7 +41,9 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(
       process.env.VITE_APP_VERSION || pkg.version,
     ),
-    __GIT_COMMIT__: JSON.stringify("live"),
+    __GIT_COMMIT__: JSON.stringify(
+      process.env.VITE_GIT_COMMIT || gitFallbackCommit(),
+    ),
   },
   test: {
     environment: "node",
