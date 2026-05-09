@@ -1,0 +1,10 @@
+{
+  "file": "homeassistant-requirements-all.txt",
+  "mode": "content",
+  "file_name": "requirements.txt",
+  "expected_ecosystem": "python",
+  "min_dependencies": 1000,
+  "max_unknown_license_risks": 100,
+  "requires_progress_hint": true,
+  "notes": "Huge requirements input should return a prioritized report with scale/progress metadata."
+}

@@ -1,0 +1,9 @@
+{
+  "file": "docker-compose-go.mod",
+  "mode": "content",
+  "file_name": "go.mod",
+  "expected_ecosystem": "go",
+  "min_dependencies": 120,
+  "forbidden_warning_substrings": ["cannot unmarshal number", "parse trivy output"],
+  "notes": "Go modules with scanner license output should preserve partial Trivy evidence without parse failure."
+}

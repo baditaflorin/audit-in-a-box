@@ -1,0 +1,9 @@
+{
+  "file": "express-github-blob.html",
+  "mode": "pasted_html",
+  "file_name": "github-blob.html",
+  "expected_ecosystem": "npm",
+  "min_dependencies": 40,
+  "should_succeed": true,
+  "notes": "Pasted GitHub blob HTML should extract the visible package.json instead of parsing page chrome."
+}

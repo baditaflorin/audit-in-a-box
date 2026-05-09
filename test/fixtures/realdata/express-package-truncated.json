@@ -1,0 +1,36 @@
+{
+  "name": "express",
+  "description": "Fast, unopinionated, minimalist web framework",
+  "version": "5.2.1",
+  "author": "TJ Holowaychuk <tj@vision-media.ca>",
+  "contributors": [
+    "Aaron Heckmann <aaron.heckmann+github@gmail.com>",
+    "Ciaran Jessup <ciaranj@gmail.com>",
+    "Douglas Christopher Wilson <doug@somethingdoug.com>",
+    "Guillermo Rauch <rauchg@gmail.com>",
+    "Jonathan Ong <me@jongleberry.com>",
+    "Roman Shtylman <shtylman+expressjs@gmail.com>",
+    "Young Jae Sim <hanul@hanul.me>"
+  ],
+  "license": "MIT",
+  "repository": "expressjs/express",
+  "homepage": "https://expressjs.com/",
+  "funding": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/express"
+  },
+  "keywords": [
+    "express",
+    "framework",
+    "sinatra",
+    "web",
+    "http",
+    "rest",
+    "restful",
+    "router",
+    "app",
+    "api"
+  ],
+  "dependencies": {
+    "accepts": "^2.0.0",
+ 

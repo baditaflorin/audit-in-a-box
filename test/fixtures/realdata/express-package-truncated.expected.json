@@ -1,0 +1,9 @@
+{
+  "file": "express-package-truncated.json",
+  "mode": "content",
+  "file_name": "package.json",
+  "expected_error_code": "manifest_truncated",
+  "expected_recoverable": true,
+  "expected_next_step_contains": "full",
+  "notes": "Truncated JSON should fail gracefully with an actionable next step."
+}

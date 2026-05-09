@@ -1,0 +1,9 @@
+{
+  "file": "poetry-pyproject.toml",
+  "mode": "content",
+  "file_name": "pyproject.toml",
+  "expected_ecosystem": "python",
+  "min_dependencies": 10,
+  "must_not_be_clean_when_unknown": true,
+  "notes": "pyproject.toml is a first-class Python dependency manifest, not unknown clean input."
+}

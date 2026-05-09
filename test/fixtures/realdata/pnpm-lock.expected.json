@@ -1,0 +1,9 @@
+{
+  "file": "pnpm-lock.yaml",
+  "mode": "content",
+  "file_name": "pnpm-lock.yaml",
+  "expected_ecosystem": "npm",
+  "min_dependencies": 100,
+  "max_unknown_license_risks": 50,
+  "notes": "pnpm lockfiles should be recognized and parsed as npm ecosystem lock evidence."
+}

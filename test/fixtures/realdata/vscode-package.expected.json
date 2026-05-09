@@ -1,0 +1,10 @@
+{
+  "file": "vscode-package.json",
+  "mode": "content",
+  "file_name": "package.json",
+  "expected_ecosystem": "npm",
+  "min_dependencies": 150,
+  "max_unknown_license_risks": 15,
+  "must_not_score_critical_without_vulnerabilities": true,
+  "notes": "Large npm manifest should be prioritized, not turned into a wall of unknown-license critical risk."
+}

@@ -1,0 +1,12 @@
+{
+  "docker-compose-go.mod": "https://raw.githubusercontent.com/docker/compose/main/go.mod",
+  "express-github-blob.html": "https://github.com/expressjs/express/blob/master/package.json",
+  "express-package-truncated.json": "derived from https://raw.githubusercontent.com/expressjs/express/master/package.json, first third only",
+  "express-package.json": "https://raw.githubusercontent.com/expressjs/express/master/package.json",
+  "homeassistant-requirements-all.txt": "https://raw.githubusercontent.com/home-assistant/core/dev/requirements_all.txt",
+  "kubernetes-go.mod": "https://raw.githubusercontent.com/kubernetes/kubernetes/master/go.mod",
+  "pnpm-lock.yaml": "https://raw.githubusercontent.com/pnpm/pnpm/main/pnpm-lock.yaml",
+  "poetry-pyproject.toml": "https://raw.githubusercontent.com/python-poetry/poetry/main/pyproject.toml",
+  "requests-requirements-dev.txt": "https://raw.githubusercontent.com/psf/requests/main/requirements-dev.txt",
+  "vscode-package.json": "https://raw.githubusercontent.com/microsoft/vscode/main/package.json"
+}

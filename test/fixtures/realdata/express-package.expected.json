@@ -1,0 +1,11 @@
+{
+  "file": "express-package.json",
+  "mode": "content",
+  "file_name": "package.json",
+  "expected_ecosystem": "npm",
+  "min_dependencies": 40,
+  "max_unknown_license_risks": 5,
+  "must_not_be_clean_when_unknown": true,
+  "must_not_score_critical_without_vulnerabilities": true,
+  "notes": "Clean npm manifest should not be reported as critical only because license metadata is incomplete."
+}
