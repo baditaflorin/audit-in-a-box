@@ -129,6 +129,8 @@ func (s Server) audit(w http.ResponseWriter, r *http.Request) {
 func (s Server) decodeAudit(r *http.Request) (models.AuditRequest, error) {
 	contentType := r.Header.Get("Content-Type")
 	if strings.HasPrefix(contentType, "multipart/form-data") {
+		r.Body = http.MaxBytesReader(nil, r.Body, s.Config.MaxUploadBytes+1)
+		// #nosec G120 -- request body is capped before multipart parsing.
 		if err := r.ParseMultipartForm(s.Config.MaxUploadBytes); err != nil {
 			return models.AuditRequest{}, err
 		}
