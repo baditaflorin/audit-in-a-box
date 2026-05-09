@@ -13,11 +13,13 @@ import {
 import { AuditReport } from "../../api/schema";
 
 type ReportViewProps = {
+  debug?: boolean;
   report: AuditReport;
 };
 
-export function ReportView({ report }: ReportViewProps) {
+export function ReportView({ debug = false, report }: ReportViewProps) {
   const severity = report.risk.grade;
+  const inputConfidence = Math.round((report.input.confidence ?? 0) * 100);
 
   return (
     <section className="space-y-5" aria-label="Audit report">
@@ -37,6 +39,20 @@ export function ReportView({ report }: ReportViewProps) {
           <p className="mt-4 text-base leading-7 text-ink/80">
             {report.summary}
           </p>
+          <div className="mt-4 grid gap-2 text-sm text-ink/70 sm:grid-cols-3">
+            <EvidencePill
+              label="Input"
+              value={report.input.kind || report.input.ecosystem}
+            />
+            <EvidencePill
+              label="Parser"
+              value={report.input.parser || "inferred"}
+            />
+            <EvidencePill
+              label="Confidence"
+              value={inputConfidence ? `${inputConfidence}%` : "unknown"}
+            />
+          </div>
           {report.warnings.length > 0 ? (
             <div className="mt-4 rounded-lg border border-gold/40 bg-gold/10 p-3 text-sm text-ink">
               <div className="flex items-center gap-2 font-semibold">
@@ -46,6 +62,22 @@ export function ReportView({ report }: ReportViewProps) {
               <ul className="mt-2 list-disc space-y-1 pl-5">
                 {report.warnings.slice(0, 5).map((warning) => (
                   <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {report.anomalies.length > 0 ? (
+            <div className="mt-4 rounded-lg border border-sky/30 bg-sky/10 p-3 text-sm text-ink">
+              <div className="flex items-center gap-2 font-semibold">
+                <AlertTriangle size={17} />
+                Evidence notes
+              </div>
+              <ul className="mt-2 space-y-2">
+                {report.anomalies.slice(0, 3).map((item) => (
+                  <li key={item.code}>
+                    <div className="font-semibold">{item.message}</div>
+                    <div className="text-ink/65">{item.next_step}</div>
+                  </li>
                 ))}
               </ul>
             </div>
@@ -62,6 +94,9 @@ export function ReportView({ report }: ReportViewProps) {
               {report.risk.score}
             </span>
             <span className="pb-2 text-lg text-white/70">/100</span>
+          </div>
+          <div className="mt-2 text-sm text-white/60">
+            Confidence {Math.round((report.risk.confidence ?? 0) * 100) || 0}%
           </div>
           <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
             <Metric label="Deps" value={report.dependencies.length} />
@@ -231,8 +266,39 @@ export function ReportView({ report }: ReportViewProps) {
             {report.tool_status.trivy?.used ? "Trivy used" : "Trivy not used"}
           </span>
         </div>
+        <div className="mt-3 break-all text-xs text-ink/55">
+          Schema {report.provenance?.schema_version ?? "unknown"} · Source{" "}
+          {report.input.source_hash?.slice(0, 16) ?? "unknown"}
+        </div>
       </div>
+
+      {debug ? (
+        <TablePanel title="Debug">
+          <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-ink p-3 text-xs text-white">
+            {JSON.stringify(
+              {
+                input: report.input,
+                provenance: report.provenance,
+                risk: report.risk,
+                anomalies: report.anomalies,
+                warnings: report.warnings,
+              },
+              null,
+              2,
+            )}
+          </pre>
+        </TablePanel>
+      ) : null}
     </section>
+  );
+}
+
+function EvidencePill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded border border-ink/10 bg-paper px-3 py-2">
+      <div className="text-xs font-semibold text-ink/45">{label}</div>
+      <div className="mt-1 font-bold text-ink">{value}</div>
+    </div>
   );
 }
 

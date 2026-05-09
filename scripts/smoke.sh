@@ -57,12 +57,14 @@ const { chromium } = require('./frontend/node_modules/@playwright/test');
     const context = await browser.newContext({ serviceWorkers: 'block' });
     const page = await context.newPage();
     await page.goto('http://127.0.0.1:4173/audit-in-a-box/', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(1500);
+    await page.locator('form[aria-label="Run dependency audit"]').waitFor({ timeout: 10000 });
+    await page.getByText('Version 0.2.0').waitFor({ timeout: 10000 });
+    await page.getByText(/Commit [0-9a-f]{12}/).waitFor({ timeout: 10000 });
     const body = await page.locator('body').innerText({ timeout: 10000 });
     const githubLinks = await page.locator('a[href="https://github.com/baditaflorin/audit-in-a-box"]').count();
     const paypalLinks = await page.locator('a[href="https://www.paypal.com/paypalme/florinbadita"]').count();
     const forms = await page.locator('form[aria-label="Run dependency audit"]').count();
-    if (!body.includes('Version 0.1.0') || githubLinks < 1 || paypalLinks < 1 || forms < 1) {
+    if (!body.includes('Version 0.2.0') || !body.includes('Commit ') || githubLinks < 1 || paypalLinks < 1 || forms < 1) {
       throw new Error('Pages smoke assertions failed');
     }
   } finally {

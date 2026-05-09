@@ -19,6 +19,8 @@ export const dependencySchema = z.object({
   licenses: z.array(z.string()).default([]),
   package_url: z.string().optional(),
   source: z.string(),
+  confidence: z.number().optional(),
+  reasons: z.array(z.string()).optional(),
 });
 
 export const vulnerabilitySchema = z.object({
@@ -30,6 +32,7 @@ export const vulnerabilitySchema = z.object({
   description: z.string().optional(),
   primary_url: z.string().optional(),
   source: z.string(),
+  confidence: z.number().optional(),
 });
 
 export const licenseRiskSchema = z.object({
@@ -37,6 +40,7 @@ export const licenseRiskSchema = z.object({
   license: z.string(),
   severity: z.string(),
   reason: z.string(),
+  confidence: z.number().optional(),
 });
 
 export const maintainerHealthSchema = z.object({
@@ -59,11 +63,42 @@ export const auditReportSchema = z.object({
     file_name: z.string(),
     ecosystem: z.string(),
     bytes: z.number(),
+    normalized_bytes: z.number().optional(),
+    kind: z.string().optional(),
+    parser: z.string().optional(),
+    confidence: z.number().optional(),
+    reasons: z.array(z.string()).optional(),
+    source_hash: z.string().optional(),
   }),
+  provenance: z
+    .object({
+      schema_version: z.string(),
+      app_version: z.object({
+        version: z.string(),
+        commit: z.string(),
+        date: z.string(),
+      }),
+      source_hash: z.string(),
+      input: z.unknown(),
+      parameters: z.record(z.string(), z.unknown()),
+    })
+    .optional(),
   tool_status: z.record(z.string(), toolStatusSchema),
   dependencies: z.array(dependencySchema),
   vulnerabilities: z.array(vulnerabilitySchema),
   license_risks: z.array(licenseRiskSchema),
+  anomalies: z
+    .array(
+      z.object({
+        code: z.string(),
+        severity: z.string(),
+        message: z.string(),
+        why: z.string(),
+        next_step: z.string(),
+        confidence: z.number(),
+      }),
+    )
+    .default([]),
   maintainer_health: z.array(maintainerHealthSchema),
   duckdb_rollup: z.object({
     used_duckdb: z.boolean(),
@@ -77,6 +112,7 @@ export const auditReportSchema = z.object({
   risk: z.object({
     score: z.number(),
     grade: z.string(),
+    confidence: z.number().optional(),
     counts: z.record(z.string(), z.number()),
     factors: z.array(z.string()),
   }),
@@ -92,6 +128,16 @@ export const auditReportSchema = z.object({
 
 export type ToolStatus = z.infer<typeof toolStatusSchema>;
 export type AuditReport = z.infer<typeof auditReportSchema>;
+
+export const apiErrorSchema = z.object({
+  error: z.object({
+    code: z.string().optional(),
+    message: z.string().optional(),
+    why: z.string().optional(),
+    next_step: z.string().optional(),
+    recoverable: z.boolean().optional(),
+  }),
+});
 
 export const scrapeCandidateSchema = z.object({
   file_name: z.string(),

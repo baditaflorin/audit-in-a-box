@@ -3,6 +3,7 @@ import {
   Box,
   CheckCircle2,
   Code2,
+  CircleStop,
   Database,
   FileUp,
   Github,
@@ -13,7 +14,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import {
   auditManifest,
   fetchTools,
@@ -46,6 +47,11 @@ export function App() {
     }
   });
   const [error, setError] = useState<string | null>(null);
+  const auditAbortRef = useRef<AbortController | null>(null);
+  const debug = useMemo(
+    () => new URLSearchParams(window.location.search).get("debug") === "1",
+    [],
+  );
 
   const tools = useQuery({
     queryKey: ["tools", backendURL],
@@ -72,7 +78,16 @@ export function App() {
       setError(null);
     },
     onError: (err) => {
-      setError(err instanceof Error ? err.message : "Audit failed");
+      setError(
+        err instanceof DOMException && err.name === "AbortError"
+          ? "Audit cancelled. The last completed report is still shown."
+          : err instanceof Error
+            ? err.message
+            : "Audit failed",
+      );
+    },
+    onSettled: () => {
+      auditAbortRef.current = null;
     },
   });
 
@@ -100,7 +115,18 @@ export function App() {
   function submit(event: FormEvent) {
     event.preventDefault();
     setStoredBackendURL(backendURL);
-    audit.mutate({ baseURL: backendURL, fileName, content });
+    const controller = new AbortController();
+    auditAbortRef.current = controller;
+    audit.mutate({
+      baseURL: backendURL,
+      fileName,
+      content,
+      signal: controller.signal,
+    });
+  }
+
+  function cancelAudit() {
+    auditAbortRef.current?.abort();
   }
 
   function loadSample(name: string) {
@@ -168,9 +194,9 @@ export function App() {
                 Drop a manifest. Get an audit you can actually read.
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-8 text-ink/70">
-                Upload or paste `package.json`, `go.mod`, or `requirements.txt`
-                and run a local Docker analyzer for SBOM, vulnerabilities,
-                license risks, maintainer health, and a plain-English summary.
+                Upload or paste a manifest or lockfile and run a local Docker
+                analyzer for SBOM, vulnerabilities, license evidence, maintainer
+                health, confidence, and a plain-English summary.
               </p>
               <div className="mt-6 grid gap-3 sm:grid-cols-3">
                 <Signal icon={<Box size={18} />} label="SBOM" />
@@ -272,7 +298,7 @@ export function App() {
               className="sr-only"
               id="manifest-file"
               type="file"
-              accept=".json,.mod,.txt"
+              accept=".json,.mod,.txt,.toml,.yaml,.yml"
               onChange={(event) => void onFile(event.target.files?.[0])}
             />
 
@@ -324,15 +350,11 @@ export function App() {
 
             <button
               className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded bg-moss px-4 py-3 text-base font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={audit.isPending}
-              type="submit"
+              type={audit.isPending ? "button" : "submit"}
+              onClick={audit.isPending ? cancelAudit : undefined}
             >
-              {audit.isPending ? (
-                <Loader2 className="animate-spin" size={18} />
-              ) : (
-                <Play size={18} />
-              )}
-              Run audit
+              {audit.isPending ? <CircleStop size={18} /> : <Play size={18} />}
+              {audit.isPending ? "Cancel audit" : "Run audit"}
             </button>
           </form>
         </div>
@@ -340,7 +362,7 @@ export function App() {
 
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {lastReport ? (
-          <ReportView report={lastReport} />
+          <ReportView debug={debug} report={lastReport} />
         ) : (
           <div className="rounded-lg border border-dashed border-ink/20 bg-white p-8 text-center">
             <Code2 className="mx-auto text-moss" size={34} />

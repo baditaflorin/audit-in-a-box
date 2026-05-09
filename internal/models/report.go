@@ -13,10 +13,12 @@ type AuditReport struct {
 	ID                string                  `json:"id"`
 	GeneratedAt       time.Time               `json:"generated_at"`
 	Input             AuditInput              `json:"input"`
+	Provenance        ReportProvenance        `json:"provenance"`
 	ToolStatus        map[string]ToolStatus   `json:"tool_status"`
 	Dependencies      []Dependency            `json:"dependencies"`
 	Vulnerabilities   []Vulnerability         `json:"vulnerabilities"`
 	LicenseRisks      []LicenseRisk           `json:"license_risks"`
+	Anomalies         []ReportAnomaly         `json:"anomalies"`
 	MaintainerHealth  []MaintainerHealth      `json:"maintainer_health"`
 	DuckDBRollup      DuckDBRollup            `json:"duckdb_rollup"`
 	Risk              RiskScore               `json:"risk"`
@@ -35,9 +37,15 @@ type BuildVersion struct {
 }
 
 type AuditInput struct {
-	FileName  string `json:"file_name"`
-	Ecosystem string `json:"ecosystem"`
-	Bytes     int    `json:"bytes"`
+	FileName        string   `json:"file_name"`
+	Ecosystem       string   `json:"ecosystem"`
+	Bytes           int      `json:"bytes"`
+	NormalizedBytes int      `json:"normalized_bytes"`
+	Kind            string   `json:"kind"`
+	Parser          string   `json:"parser"`
+	Confidence      float64  `json:"confidence"`
+	Reasons         []string `json:"reasons"`
+	SourceHash      string   `json:"source_hash"`
 }
 
 type ToolStatus struct {
@@ -59,24 +67,28 @@ type Dependency struct {
 	Licenses   []string `json:"licenses"`
 	PackageURL string   `json:"package_url,omitempty"`
 	Source     string   `json:"source"`
+	Confidence float64  `json:"confidence,omitempty"`
+	Reasons    []string `json:"reasons,omitempty"`
 }
 
 type Vulnerability struct {
-	ID               string `json:"id"`
-	PackageName      string `json:"package_name"`
-	InstalledVersion string `json:"installed_version"`
-	FixedVersion     string `json:"fixed_version,omitempty"`
-	Severity         string `json:"severity"`
-	Description      string `json:"description,omitempty"`
-	PrimaryURL       string `json:"primary_url,omitempty"`
-	Source           string `json:"source"`
+	ID               string  `json:"id"`
+	PackageName      string  `json:"package_name"`
+	InstalledVersion string  `json:"installed_version"`
+	FixedVersion     string  `json:"fixed_version,omitempty"`
+	Severity         string  `json:"severity"`
+	Description      string  `json:"description,omitempty"`
+	PrimaryURL       string  `json:"primary_url,omitempty"`
+	Source           string  `json:"source"`
+	Confidence       float64 `json:"confidence,omitempty"`
 }
 
 type LicenseRisk struct {
-	PackageName string `json:"package_name"`
-	License     string `json:"license"`
-	Severity    string `json:"severity"`
-	Reason      string `json:"reason"`
+	PackageName string  `json:"package_name"`
+	License     string  `json:"license"`
+	Severity    string  `json:"severity"`
+	Reason      string  `json:"reason"`
+	Confidence  float64 `json:"confidence,omitempty"`
 }
 
 type MaintainerHealth struct {
@@ -103,10 +115,11 @@ type DuckDBRollup struct {
 }
 
 type RiskScore struct {
-	Score   int            `json:"score"`
-	Grade   string         `json:"grade"`
-	Counts  map[string]int `json:"counts"`
-	Factors []string       `json:"factors"`
+	Score      int            `json:"score"`
+	Grade      string         `json:"grade"`
+	Confidence float64        `json:"confidence"`
+	Counts     map[string]int `json:"counts"`
+	Factors    []string       `json:"factors"`
 }
 
 type ScrapedManifest struct {
@@ -114,10 +127,28 @@ type ScrapedManifest struct {
 	Ecosystem string `json:"ecosystem"`
 	Content   string `json:"content"`
 	Score     int    `json:"score"`
+	Reason    string `json:"reason,omitempty"`
 }
 
 type EvidenceInfo struct {
 	Available bool   `json:"available"`
 	Path      string `json:"path,omitempty"`
 	Message   string `json:"message,omitempty"`
+}
+
+type ReportAnomaly struct {
+	Code       string  `json:"code"`
+	Severity   string  `json:"severity"`
+	Message    string  `json:"message"`
+	Why        string  `json:"why"`
+	NextStep   string  `json:"next_step"`
+	Confidence float64 `json:"confidence"`
+}
+
+type ReportProvenance struct {
+	SchemaVersion string         `json:"schema_version"`
+	AppVersion    BuildVersion   `json:"app_version"`
+	SourceHash    string         `json:"source_hash"`
+	Input         AuditInput     `json:"input"`
+	Parameters    map[string]any `json:"parameters"`
 }

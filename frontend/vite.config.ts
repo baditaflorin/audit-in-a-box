@@ -28,7 +28,9 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(
       process.env.VITE_APP_VERSION || pkg.version,
     ),
-    __GIT_COMMIT__: JSON.stringify("8d4999d16cf6"),
+    __GIT_COMMIT__: JSON.stringify(
+      process.env.VITE_GIT_COMMIT || "713225132b80",
+    ),
   },
   test: {
     environment: "node",

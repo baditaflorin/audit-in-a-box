@@ -101,22 +101,26 @@ Score: %d/100 (%s)
 Dependencies: %d
 Vulnerabilities: %d
 License risks: %d
+Evidence anomalies: %d
 Maintainer risks: %d
 Key factors: %s
+Input confidence: %.0f%%
 Use plain English. Do not invent exact remediation versions unless present in the evidence.`,
 		report.Risk.Score,
 		report.Risk.Grade,
 		len(report.Dependencies),
 		len(report.Vulnerabilities),
 		len(report.LicenseRisks),
+		len(report.Anomalies),
 		report.Risk.Counts["maintainer_risks"],
 		strings.Join(report.Risk.Factors, "; "),
+		report.Input.Confidence*100,
 	)
 }
 
 func fallback(report models.AuditReport) string {
 	if report.Risk.Score == 0 {
-		return "No obvious dependency risk was found from the available evidence. Keep scanner databases fresh and review unknown licenses before release."
+		return "No obvious confirmed dependency risk was found from the available evidence. Keep scanner databases fresh and treat missing license metadata as incomplete evidence, not as proof of risk."
 	}
 
 	parts := []string{
@@ -125,6 +129,9 @@ func fallback(report models.AuditReport) string {
 	}
 	if len(report.Risk.Factors) > 0 {
 		parts = append(parts, "Main drivers: "+strings.Join(report.Risk.Factors, "; ")+".")
+	}
+	if len(report.Anomalies) > 0 {
+		parts = append(parts, "Evidence note: "+report.Anomalies[0].Message+" "+report.Anomalies[0].NextStep)
 	}
 	parts = append(parts, "Prioritize critical/high vulnerabilities, packages with restrictive licenses, and dependencies with stale or fragile maintainer signals.")
 	return strings.Join(parts, " ")

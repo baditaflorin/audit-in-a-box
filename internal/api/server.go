@@ -221,10 +221,18 @@ func writeError(w http.ResponseWriter, status int, code string, err error) {
 	if err == nil {
 		err = errors.New(http.StatusText(status))
 	}
+	var domainErr models.DomainError
+	if errors.As(err, &domainErr) {
+		writeJSON(w, status, map[string]any{"error": domainErr})
+		return
+	}
 	writeJSON(w, status, map[string]any{
-		"error": map[string]string{
-			"code":    code,
-			"message": err.Error(),
+		"error": models.DomainError{
+			Code:        code,
+			Message:     err.Error(),
+			Why:         "The backend could not finish that request.",
+			NextStep:    "Check the input and try again. If it repeats, open the browser console and backend logs.",
+			Recoverable: true,
 		},
 	})
 }

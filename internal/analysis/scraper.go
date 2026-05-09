@@ -19,6 +19,9 @@ func ExtractManifestsFromHTML(html string) ([]models.ScrapedManifest, error) {
 	}
 
 	var candidates []models.ScrapedManifest
+	if candidate, ok := githubBlobCandidate(doc); ok {
+		candidates = append(candidates, candidate)
+	}
 	doc.Find("pre, code, textarea").Each(func(_ int, selection *goquery.Selection) {
 		text := strings.TrimSpace(selection.Text())
 		if text == "" {
@@ -43,15 +46,42 @@ func ExtractManifestsFromHTML(html string) ([]models.ScrapedManifest, error) {
 	return candidates, nil
 }
 
+func githubBlobCandidate(doc *goquery.Document) (models.ScrapedManifest, bool) {
+	var lines []string
+	doc.Find(".blob-code, td.blob-code, table.highlight td:nth-child(2)").Each(func(_ int, selection *goquery.Selection) {
+		text := strings.TrimRight(selection.Text(), "\n")
+		if strings.TrimSpace(text) == "" {
+			lines = append(lines, "")
+			return
+		}
+		lines = append(lines, text)
+	})
+	if len(lines) == 0 {
+		return models.ScrapedManifest{}, false
+	}
+	text := strings.TrimSpace(strings.Join(lines, "\n"))
+	candidate, ok := manifestCandidate(text)
+	if !ok {
+		return models.ScrapedManifest{}, false
+	}
+	candidate.Score += 35
+	candidate.Reason = "GitHub blob code table"
+	return candidate, true
+}
+
 func manifestCandidate(text string) (models.ScrapedManifest, bool) {
 	normalized := strings.TrimSpace(text)
 	score := 0
 	ecosystem := sbom.DetectEcosystem("", normalized)
+	kind := sbom.InferManifest("", normalized).Kind
 	switch ecosystem {
 	case "npm":
 		score += 60
 		if strings.Contains(normalized, `"dependencies"`) {
 			score += 30
+		}
+		if kind == "pnpm-lock" || kind == "package-lock" {
+			score += 20
 		}
 	case "go":
 		score += 70
@@ -81,11 +111,22 @@ func manifestCandidate(text string) (models.ScrapedManifest, bool) {
 		compact = compact[:20000]
 	}
 
+	fileName := sbom.DefaultFileName(ecosystem)
+	switch kind {
+	case "package-lock":
+		fileName = "package-lock.json"
+	case "pnpm-lock":
+		fileName = "pnpm-lock.yaml"
+	case "pyproject":
+		fileName = "pyproject.toml"
+	}
+
 	return models.ScrapedManifest{
-		FileName:  sbom.DefaultFileName(ecosystem),
+		FileName:  fileName,
 		Ecosystem: ecosystem,
 		Content:   compact,
 		Score:     score,
+		Reason:    "manifest-like text block",
 	}, true
 }
 

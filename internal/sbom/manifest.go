@@ -3,28 +3,28 @@ package sbom
 import (
 	"encoding/json"
 	"fmt"
-	"regexp"
-	"sort"
+	"path/filepath"
 	"strings"
 
 	"github.com/baditaflorin/audit-in-a-box/internal/models"
-	"golang.org/x/mod/modfile"
 )
 
-var requirementName = regexp.MustCompile(`^([A-Za-z0-9_.-]+)`)
+const schemaVersion = "audit-report.v2"
+
+type ManifestInference struct {
+	FileName          string
+	Ecosystem         string
+	Kind              string
+	Parser            string
+	Confidence        float64
+	Reasons           []string
+	NormalizedContent string
+	SourceHash        string
+	SchemaVersion     string
+}
 
 func DetectEcosystem(fileName string, content string) string {
-	name := strings.ToLower(fileName)
-	switch {
-	case strings.HasSuffix(name, "package.json") || strings.Contains(content, `"dependencies"`):
-		return "npm"
-	case strings.HasSuffix(name, "go.mod") || strings.HasPrefix(strings.TrimSpace(content), "module "):
-		return "go"
-	case strings.HasSuffix(name, "requirements.txt"):
-		return "python"
-	default:
-		return "unknown"
-	}
+	return InferManifest(fileName, content).Ecosystem
 }
 
 func DefaultFileName(ecosystem string) string {
@@ -40,112 +40,115 @@ func DefaultFileName(ecosystem string) string {
 	}
 }
 
-func ParseManifest(fileName string, content string) ([]models.Dependency, []string, error) {
-	ecosystem := DetectEcosystem(fileName, content)
-	switch ecosystem {
-	case "npm":
-		return parsePackageJSON(content)
-	case "go":
-		return parseGoMod(fileName, content)
-	case "python":
-		return parseRequirements(content), nil, nil
+func NormalizeContent(content string) string {
+	normalized := strings.TrimPrefix(content, "\ufeff")
+	normalized = strings.ReplaceAll(normalized, "\r\n", "\n")
+	normalized = strings.ReplaceAll(normalized, "\r", "\n")
+	normalized = strings.ReplaceAll(normalized, "\u00a0", " ")
+	normalized = strings.ReplaceAll(normalized, "\x00", "")
+	return strings.TrimSpace(normalized)
+}
+
+func InferManifest(fileName string, content string) ManifestInference {
+	normalized := NormalizeContent(content)
+	name := strings.ToLower(filepath.Base(strings.TrimSpace(fileName)))
+	trimmed := strings.TrimSpace(normalized)
+	lower := strings.ToLower(trimmed)
+
+	inference := ManifestInference{
+		FileName:          fileName,
+		Ecosystem:         "unknown",
+		Kind:              "unknown",
+		Parser:            "none",
+		Confidence:        0.1,
+		NormalizedContent: normalized,
+		SourceHash:        sourceHash(normalized),
+		SchemaVersion:     schemaVersion,
+	}
+
+	set := func(ecosystem, kind, parser string, confidence float64, reasons ...string) ManifestInference {
+		inference.Ecosystem = ecosystem
+		inference.Kind = kind
+		inference.Parser = parser
+		inference.Confidence = confidence
+		inference.Reasons = append(inference.Reasons, reasons...)
+		return inference
+	}
+
+	switch {
+	case name == "package-lock.json":
+		return set("npm", "package-lock", "package-lock.json", 0.99, "file name is package-lock.json")
+	case strings.HasSuffix(name, "pnpm-lock.yaml") || strings.HasSuffix(name, "pnpm-lock.yml"):
+		return set("npm", "pnpm-lock", "pnpm-lock.yaml", 0.99, "file name is pnpm-lock.yaml")
+	case strings.HasSuffix(name, "package.json"):
+		return set("npm", "package-json", "package.json", 0.98, "file name is package.json")
+	case strings.HasSuffix(name, "go.mod"):
+		return set("go", "go-mod", "go.mod", 0.99, "file name is go.mod")
+	case name == "pyproject.toml":
+		return set("python", "pyproject", "pyproject.toml", 0.99, "file name is pyproject.toml")
+	case strings.Contains(name, "requirements") && strings.HasSuffix(name, ".txt"):
+		return set("python", "requirements", "requirements.txt", 0.96, "file name looks like a Python requirements file")
+	case json.Valid([]byte(trimmed)) && (strings.Contains(trimmed, `"dependencies"`) || strings.Contains(trimmed, `"devDependencies"`) || strings.Contains(trimmed, `"peerDependencies"`)):
+		return set("npm", "package-json", "package.json", 0.9, "JSON contains npm dependency fields")
+	case strings.HasPrefix(trimmed, "module ") || strings.Contains(trimmed, "\nrequire "):
+		return set("go", "go-mod", "go.mod", 0.92, "content matches go.mod module/require shape")
+	case strings.Contains(lower, "[tool.poetry.dependencies]") || strings.Contains(lower, "[project]"):
+		return set("python", "pyproject", "pyproject.toml", 0.88, "content contains pyproject dependency sections")
+	case strings.Contains(lower, "lockfileversion:") && (strings.Contains(lower, "\nimporters:") || strings.Contains(lower, "\npackages:")):
+		return set("npm", "pnpm-lock", "pnpm-lock.yaml", 0.84, "YAML contains pnpm lockfile sections")
+	case looksLikeRequirements(trimmed):
+		return set("python", "requirements", "requirements.txt", 0.82, "lines look like Python requirement specifiers")
 	default:
-		return nil, []string{"unknown manifest type; scanner tools may still produce results"}, nil
+		inference.Reasons = []string{"input does not match package.json, package-lock.json, pnpm-lock.yaml, go.mod, pyproject.toml, or requirements.txt"}
+		return inference
 	}
 }
 
-type packageJSON struct {
-	Dependencies         map[string]string `json:"dependencies"`
-	DevDependencies      map[string]string `json:"devDependencies"`
-	PeerDependencies     map[string]string `json:"peerDependencies"`
-	OptionalDependencies map[string]string `json:"optionalDependencies"`
+func ParseManifest(fileName string, content string) ([]models.Dependency, []string, error) {
+	deps, warnings, _, err := AnalyzeManifest(fileName, content)
+	return deps, warnings, err
 }
 
-func parsePackageJSON(content string) ([]models.Dependency, []string, error) {
-	var manifest packageJSON
-	if err := json.Unmarshal([]byte(content), &manifest); err != nil {
-		return nil, nil, fmt.Errorf("parse package.json: %w", err)
+func AnalyzeManifest(fileName string, content string) ([]models.Dependency, []string, ManifestInference, error) {
+	inference := InferManifest(fileName, content)
+	content = inference.NormalizedContent
+
+	var (
+		deps     []models.Dependency
+		warnings []string
+		err      error
+	)
+	switch inference.Kind {
+	case "package-json":
+		deps, warnings, err = parsePackageJSON(content)
+	case "package-lock":
+		deps, warnings, err = parsePackageLock(content)
+	case "pnpm-lock":
+		deps, warnings, err = parsePNPMLock(content)
+	case "go-mod":
+		deps, warnings, err = parseGoMod(fileName, content)
+	case "pyproject":
+		deps, warnings, err = parsePyproject(content)
+	case "requirements":
+		deps, warnings = parseRequirements(content)
+	default:
+		warnings = append(warnings, "Unsupported manifest type. Upload package.json, package-lock.json, pnpm-lock.yaml, go.mod, pyproject.toml, or requirements.txt.")
 	}
-
-	var deps []models.Dependency
-	appendDeps := func(scope string, values map[string]string) {
-		for name, version := range values {
-			deps = append(deps, models.Dependency{
-				Name:      name,
-				Version:   version,
-				Ecosystem: "npm",
-				Scope:     scope,
-				Source:    "manifest",
-			})
-		}
-	}
-
-	appendDeps("runtime", manifest.Dependencies)
-	appendDeps("development", manifest.DevDependencies)
-	appendDeps("peer", manifest.PeerDependencies)
-	appendDeps("optional", manifest.OptionalDependencies)
-	sortDependencies(deps)
-
-	return deps, nil, nil
-}
-
-func parseGoMod(fileName string, content string) ([]models.Dependency, []string, error) {
-	parsed, err := modfile.Parse(fileName, []byte(content), nil)
 	if err != nil {
-		return nil, nil, fmt.Errorf("parse go.mod: %w", err)
+		return nil, warnings, inference, err
 	}
 
-	deps := make([]models.Dependency, 0, len(parsed.Require))
-	for _, req := range parsed.Require {
-		scope := "runtime"
-		if req.Indirect {
-			scope = "indirect"
+	for i := range deps {
+		if deps[i].Confidence == 0 {
+			deps[i].Confidence = inference.Confidence
 		}
-		deps = append(deps, models.Dependency{
-			Name:      req.Mod.Path,
-			Version:   req.Mod.Version,
-			Ecosystem: "go",
-			Scope:     scope,
-			Source:    "manifest",
-		})
+		if len(deps[i].Reasons) == 0 {
+			deps[i].Reasons = []string{"parsed from " + inference.Kind}
+		}
 	}
 	sortDependencies(deps)
-
-	return deps, nil, nil
-}
-
-func parseRequirements(content string) []models.Dependency {
-	var deps []models.Dependency
-	for _, line := range strings.Split(content, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "-") {
-			continue
-		}
-		line = strings.Split(line, "#")[0]
-		match := requirementName.FindStringSubmatch(line)
-		if len(match) < 2 {
-			continue
-		}
-		name := match[1]
-		version := strings.TrimSpace(strings.TrimPrefix(line, name))
-		deps = append(deps, models.Dependency{
-			Name:      name,
-			Version:   version,
-			Ecosystem: "python",
-			Scope:     "runtime",
-			Source:    "manifest",
-		})
+	if len(deps) > 100 {
+		warnings = append(warnings, fmt.Sprintf("Large dependency surface detected: %d dependencies. The report is prioritized and keeps confidence on inferred data.", len(deps)))
 	}
-	sortDependencies(deps)
-
-	return deps
-}
-
-func sortDependencies(deps []models.Dependency) {
-	sort.Slice(deps, func(i, j int) bool {
-		if deps[i].Ecosystem == deps[j].Ecosystem {
-			return deps[i].Name < deps[j].Name
-		}
-		return deps[i].Ecosystem < deps[j].Ecosystem
-	})
+	return deps, warnings, inference, nil
 }

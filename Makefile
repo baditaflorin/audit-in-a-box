@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 REPO := baditaflorin/audit-in-a-box
 IMAGE := ghcr.io/$(REPO)
-VERSION ?= 0.1.0
+VERSION ?= 0.2.0
 COMMIT := $(shell git rev-parse --short=12 HEAD 2>/dev/null || echo unknown)
 DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 GO_LDFLAGS := -s -w -X github.com/baditaflorin/audit-in-a-box/pkg/version.Version=$(VERSION) -X github.com/baditaflorin/audit-in-a-box/pkg/version.Commit=$(COMMIT) -X github.com/baditaflorin/audit-in-a-box/pkg/version.Date=$(DATE)
@@ -39,7 +39,7 @@ test-integration: ## run integration tests
 	$(GO) test -tags=integration ./test/integration/...
 
 smoke: ## build and run smoke tests
-	./scripts/smoke.sh
+	bash scripts/smoke.sh
 
 lint: ## run linters and security checks
 	$(GO) vet $(GO_PACKAGES)

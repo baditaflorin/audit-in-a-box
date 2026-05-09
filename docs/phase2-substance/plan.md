@@ -46,3 +46,7 @@ This plan ranks substance items by impact on the real-data fixture set.
 7. Determinism, provenance, and performance documentation.
 8. Frontend state/cancellation/debug wiring.
 9. Postmortem and version bump.
+
+## Implementation Status
+
+Completed in v0.2.0. The fixture suite now enforces the selected substance items for all ten real-world inputs, with 9/10 useful report outputs and 10/10 graceful report-or-recoverable-error outcomes.

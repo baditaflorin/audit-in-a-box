@@ -3,6 +3,7 @@ package sbom
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/baditaflorin/audit-in-a-box/internal/models"
@@ -46,6 +47,8 @@ func (s Scanner) RunSyft(ctx context.Context, workDir string) ([]models.Dependen
 			Licenses:   parseSyftLicenses(artifact.Licenses),
 			PackageURL: artifact.PURL,
 			Source:     "syft",
+			Confidence: 0.96,
+			Reasons:    []string{"detected by Syft SBOM scan"},
 		})
 	}
 
@@ -90,6 +93,7 @@ func (s Scanner) RunGrype(ctx context.Context, workDir string) ([]models.Vulnera
 			Severity:         strings.ToUpper(match.Vulnerability.Severity),
 			Description:      match.Vulnerability.Description,
 			Source:           "grype",
+			Confidence:       0.95,
 		}
 		if len(match.Vulnerability.URLs) > 0 {
 			vuln.PrimaryURL = match.Vulnerability.URLs[0]
@@ -125,7 +129,7 @@ func (s Scanner) RunTrivy(ctx context.Context, workDir string) ([]models.Vulnera
 				Name       string `json:"Name"`
 				Severity   string `json:"Severity"`
 				Category   string `json:"Category"`
-				Confidence string `json:"Confidence"`
+				Confidence any    `json:"Confidence"`
 			} `json:"Licenses"`
 		} `json:"Results"`
 	}
@@ -150,6 +154,7 @@ func (s Scanner) RunTrivy(ctx context.Context, workDir string) ([]models.Vulnera
 				Description:      item.Description,
 				PrimaryURL:       primaryURL,
 				Source:           "trivy",
+				Confidence:       0.94,
 			})
 		}
 		for _, item := range result.LicenseFindings {
@@ -160,12 +165,28 @@ func (s Scanner) RunTrivy(ctx context.Context, workDir string) ([]models.Vulnera
 				PackageName: item.PkgName,
 				License:     item.Name,
 				Severity:    strings.ToUpper(item.Severity),
-				Reason:      strings.TrimSpace(item.Category + " " + item.Confidence),
+				Reason:      strings.TrimSpace(item.Category + " " + confidenceText(item.Confidence)),
+				Confidence:  0.9,
 			})
 		}
 	}
 
 	return vulns, licenses, nil
+}
+
+func confidenceText(value any) string {
+	switch item := value.(type) {
+	case string:
+		return item
+	case float64:
+		return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", item), "0"), ".")
+	default:
+		raw, err := json.Marshal(item)
+		if err != nil || string(raw) == "null" {
+			return ""
+		}
+		return string(raw)
+	}
 }
 
 func parseSyftLicenses(raw json.RawMessage) []string {

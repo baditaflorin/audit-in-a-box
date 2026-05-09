@@ -1,4 +1,9 @@
-import { auditReportSchema, scrapeCandidateSchema, ToolStatus } from "./schema";
+import {
+  apiErrorSchema,
+  auditReportSchema,
+  scrapeCandidateSchema,
+  ToolStatus,
+} from "./schema";
 
 const DEFAULT_BACKEND = "http://localhost:25342";
 const STORAGE_KEY = "audit-in-a-box.backend-url";
@@ -46,10 +51,12 @@ export async function auditManifest(input: {
   content: string;
   pastedHTML?: string;
   ecosystem?: string;
+  signal?: AbortSignal;
 }) {
   const response = await fetch(`${trimSlash(input.baseURL)}/api/v1/audits`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    signal: input.signal,
     body: JSON.stringify({
       file_name: input.fileName,
       content: input.content,
@@ -65,8 +72,13 @@ export async function auditManifest(input: {
 
 async function errorMessage(response: Response) {
   try {
-    const payload = (await response.json()) as { error?: { message?: string } };
-    return payload.error?.message || `Backend returned ${response.status}`;
+    const payload = apiErrorSchema.parse(await response.json());
+    const parts = [
+      payload.error.message,
+      payload.error.why ? `Why: ${payload.error.why}` : "",
+      payload.error.next_step ? `Next: ${payload.error.next_step}` : "",
+    ].filter(Boolean);
+    return parts.join(" ");
   } catch {
     return `Backend returned ${response.status}`;
   }

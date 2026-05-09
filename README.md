@@ -6,7 +6,7 @@ Repository: https://github.com/baditaflorin/audit-in-a-box
 
 Support: https://www.paypal.com/paypalme/florinbadita
 
-Static web UI plus local Docker analyzer for OSS dependency risk reports.
+Static web UI plus local Docker analyzer for OSS dependency risk reports. Current release: v0.2.0.
 
 ## Quickstart
 
@@ -19,6 +19,8 @@ make smoke
 ```
 
 The GitHub Pages frontend is the public entrypoint. The analyzer runs as a local or hosted Docker backend so Trivy, Syft, Grype, DuckDB, and a local LLM can process user-provided manifests without putting secrets in the browser.
+
+Supported v0.2 inputs include `package.json`, `package-lock.json`, `pnpm-lock.yaml`, `go.mod`, `pyproject.toml`, `requirements.txt`, and pasted GitHub blob HTML.
 
 ## Architecture
 
@@ -44,11 +46,12 @@ Rel(api, llm, "Prompts", "local-only")
 
 ## Documentation
 
-- Architecture: docs/architecture.md
-- API: docs/api.md
-- Deployment: deploy/README.md
-- ADRs: docs/adr/
-- Postmortem: docs/postmortem.md
+- Architecture: https://github.com/baditaflorin/audit-in-a-box/blob/main/docs/architecture.md
+- API: https://github.com/baditaflorin/audit-in-a-box/blob/main/docs/api.md
+- Deployment: https://github.com/baditaflorin/audit-in-a-box/blob/main/deploy/README.md
+- ADRs: https://github.com/baditaflorin/audit-in-a-box/tree/main/docs/adr
+- Postmortem: https://github.com/baditaflorin/audit-in-a-box/blob/main/docs/postmortem.md
+- Phase 2 postmortem: https://github.com/baditaflorin/audit-in-a-box/blob/main/docs/postmortem-phase2-substance.md
 
 ## License
 

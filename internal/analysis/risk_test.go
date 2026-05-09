@@ -20,8 +20,11 @@ func TestScoreReportCriticalVulnerability(t *testing.T) {
 	require.Equal(t, 1, score.Counts["critical"])
 }
 
-func TestAssessLicenseRisksFlagsUnknown(t *testing.T) {
+func TestAssessLicenseRisksDoesNotPromoteMissingMetadataToRisk(t *testing.T) {
 	risks := AssessLicenseRisks([]models.Dependency{{Name: "mystery", Ecosystem: "npm"}}, nil)
-	require.Len(t, risks, 1)
-	require.Equal(t, "UNKNOWN", risks[0].License)
+	require.Empty(t, risks)
+
+	anomalies := LicenseEvidenceAnomalies([]models.Dependency{{Name: "mystery", Ecosystem: "npm"}})
+	require.Len(t, anomalies, 1)
+	require.Equal(t, "license_evidence_missing", anomalies[0].Code)
 }

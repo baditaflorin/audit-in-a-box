@@ -65,3 +65,22 @@ The v1 backend was run against ten real-world inputs with `TOOL_TIMEOUT=5s`, `MA
 - No architecture mode change.
 - No SaaS accounts, auth, team features, or automatic upgrade PRs.
 - No legal-grade license advice.
+
+## Phase 2 Result
+
+The Phase 2 fixture test suite now runs these ten inputs as the regression contract.
+
+| Fixture | Phase 2 behavior | Status |
+| --- | --- | --- |
+| `express-package.json` | npm package manifest inferred with 44 dependencies; missing license metadata is an evidence anomaly, not a critical risk. | Pass |
+| `vscode-package.json` | large npm manifest inferred with 150+ dependencies and non-critical risk score when no vulnerability evidence is present. | Pass |
+| `docker-compose-go.mod` | Go module parsed with 120+ dependencies; numeric Trivy confidence no longer breaks scanner parsing. | Pass |
+| `kubernetes-go.mod` | huge Go module parsed deterministically with 200+ dependencies. | Pass |
+| `requests-requirements-dev.txt` | Python requirements parsed with markers/comments normalized. | Pass |
+| `homeassistant-requirements-all.txt` | 1000+ requirements parsed without crashing and surfaced as a large dependency surface. | Pass |
+| `poetry-pyproject.toml` | pyproject/Poetry dependencies parsed as Python evidence instead of clean unknown input. | Pass |
+| `pnpm-lock.yaml` | multi-document pnpm lockfile parsed across all YAML documents. | Pass |
+| `express-github-blob.html` | GitHub blob HTML extractor pulls the visible `package.json` code table. | Pass |
+| `express-package-truncated.json` | recoverable `manifest_truncated` error includes what/why/next step. | Pass |
+
+Pass rate: 9/10 produce useful reports; 10/10 produce either a useful report or a domain-specific recoverable failure. The remaining non-report case is intentionally the truncated file.

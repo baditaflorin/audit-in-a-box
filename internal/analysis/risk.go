@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"sort"
 	"strings"
 	"time"
 
@@ -79,12 +80,14 @@ func ScoreReport(deps []models.Dependency, vulns []models.Vulnerability, license
 	if score > 100 {
 		score = 100
 	}
+	sort.Strings(factors)
 
 	return models.RiskScore{
-		Score:   score,
-		Grade:   grade(score),
-		Counts:  counts,
-		Factors: factors,
+		Score:      score,
+		Grade:      grade(score),
+		Confidence: scoreConfidence(deps, vulns, licenses),
+		Counts:     counts,
+		Factors:    factors,
 	}
 }
 
@@ -120,6 +123,17 @@ func DeduplicateDependencies(items []models.Dependency) []models.Dependency {
 	for _, item := range seen {
 		out = append(out, item)
 	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Ecosystem != out[j].Ecosystem {
+			return out[i].Ecosystem < out[j].Ecosystem
+		}
+		leftName := strings.ToLower(out[i].Name)
+		rightName := strings.ToLower(out[j].Name)
+		if leftName != rightName {
+			return leftName < rightName
+		}
+		return out[i].Version < out[j].Version
+	})
 	return out
 }
 
@@ -134,5 +148,59 @@ func DeduplicateVulnerabilities(items []models.Vulnerability) []models.Vulnerabi
 		seen[key] = true
 		out = append(out, item)
 	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Severity != out[j].Severity {
+			return severityRank(out[i].Severity) > severityRank(out[j].Severity)
+		}
+		if out[i].PackageName != out[j].PackageName {
+			return out[i].PackageName < out[j].PackageName
+		}
+		return out[i].ID < out[j].ID
+	})
 	return out
+}
+
+func scoreConfidence(deps []models.Dependency, vulns []models.Vulnerability, licenses []models.LicenseRisk) float64 {
+	if len(deps) == 0 {
+		return 0.35
+	}
+	total := 0.0
+	count := 0.0
+	for _, dep := range deps {
+		if dep.Confidence > 0 {
+			total += dep.Confidence
+			count++
+		}
+	}
+	for _, vuln := range vulns {
+		if vuln.Confidence > 0 {
+			total += vuln.Confidence
+			count++
+		}
+	}
+	for _, license := range licenses {
+		if license.Confidence > 0 {
+			total += license.Confidence
+			count++
+		}
+	}
+	if count == 0 {
+		return 0.6
+	}
+	return total / count
+}
+
+func severityRank(value string) int {
+	switch strings.ToUpper(value) {
+	case "CRITICAL":
+		return 5
+	case "HIGH":
+		return 4
+	case "MEDIUM":
+		return 3
+	case "LOW":
+		return 2
+	default:
+		return 1
+	}
 }
