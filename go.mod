@@ -4,7 +4,7 @@ go 1.26.3
 
 require (
 	github.com/PuerkitoBio/goquery v1.10.3
-	github.com/go-chi/chi/v5 v5.2.3
+	github.com/go-chi/chi/v5 v5.2.4
 	github.com/go-chi/cors v1.2.2
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/kelseyhightower/envconfig v1.4.0
